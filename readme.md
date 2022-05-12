@@ -1,52 +1,48 @@
-# `xstream-sample`
+# `xstream-group-by`
 
 ```
-pnpm install --save xstream-sample
+pnpm install --save xstream-group-by
 ```
 
-An xstream operator to get the latest events from a secondary stream whenever a
-primary stream emits.
-
-## description
-
-The result stream will emit the latest events from the "sampled" stream (provided as argument to this operator), only when the source stream emits.
-
-If the source or the sample stream emit an error, the result stream will propagate the error. The result stream will only complete upon completion of the source stream.
-
-Marble diagram:
-
-```text
---1----2-----3---------4---| (source)
-----a-----b-----c--d-|       (other)
-          sample
--------a-----b---------d---|
-```
+Emits streams grouped by requested key
 
 ## usage
 
 ```js
 import xs from 'xstream'
-import sample from 'xstream-sample'
-
-const source = xs.periodic(1000).take(3)
-const sampled = xs.periodic(100)
-
-const stream = source.compose(sample(sampled))
-
-stream.addListener({
-  next: i => console.log(i),
+import fromDiagram from 'xstream/extra/fromDiagram'
+import flattenConcurrently from 'xstream/extra/flattenConcurrently'
+import groupBy from 'xstream-group-by'
+ 
+xs.of(
+  { id: 1, name: 'JavaScript' },
+  { id: 2, name: 'Parcel' },
+  { id: 2, name: 'webpack' },
+  { id: 1, name: 'TypeScript' },
+  { id: 3, name: 'TSLint' }
+)
+.compose(groupBy(p => p.id))
+.map(group$ => group$.map(x => [x.id, x]))
+.compose(flattenConcurrently)
+.addListener({
+  next: p => console.log('group: ' + p[0] + ', ' + p[1].name),
   error: err => console.error(err),
   complete: () => console.log('completed')
-})
+});
 ```
 
 ```text
-> 8
-> 18
-> 28
+> starting
+> group 1: Javascript
+> group 2: Parcel
+> group 2: webpack
+> group 1: Typescript
+> group 3: TSLint
+> completed
 ```
 
 ## License
 
 MIT
+
 
